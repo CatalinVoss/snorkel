@@ -27,6 +27,7 @@ from snorkel.utils import (
     matrix_tn
 )
 
+
 def get_cand_class(feature, values=None):
     # Note: multiclass support may be needed...
     return candidate_subclass(feature, ['data'], values=values)
