@@ -14,6 +14,8 @@ from sqlalchemy.sql import select
 from snorkel.models import Candidate, TemporarySpan, Sentence
 from snorkel.udf import UDF, UDFRunner
 
+QUEUE_COLLECT_TIMEOUT = 5
+
 
 class CandidateExtractor(UDFRunner):
     """
@@ -33,7 +35,7 @@ class CandidateExtractor(UDFRunner):
                                 where A and B are Contexts. Only applies to binary relations. Default is False.
     """
     def __init__(self, candidate_class, cspaces, matchers, self_relations=False, nested_relations=False, symmetric_relations=False):
-        self.FeatureCandidate = candidate_class
+        self.ExtractionCandidate = candidate_class
         super(CandidateExtractor, self).__init__(CandidateExtractorUDF,
                                                  candidate_class=candidate_class,
                                                  cspaces=cspaces,
@@ -46,9 +48,8 @@ class CandidateExtractor(UDFRunner):
         super(CandidateExtractor, self).apply(xs, split=split, **kwargs)
 
     def clear(self, session, split, **kwargs):
-        cand_ids = session.query(self.FeatureCandidate.id).filter(self.FeatureCandidate.split == split).all()
+        cand_ids = session.query(self.ExtractionCandidate.id).filter(self.ExtractionCandidate.split == split).all()
         session.query(Candidate).filter(Candidate.id.in_(cand_ids)).delete(synchronize_session='fetch')
-
 
 
 class CandidateExtractorUDF(UDF):
@@ -86,15 +87,9 @@ class CandidateExtractorUDF(UDF):
                 tc.load_id_or_insert(self.session)
                 self.child_context_sets[i].add(tc)
 
-        # Get the document origin by climbing up the hierarchy until we get None
-        # Start by binding context to our session again
-        # TODO: is there a better way to tie the context to our session?
-        docparent = self.session.query(context.__class__).get(context.id)
-        while docparent.get_parent(): docparent = docparent.get_parent()
-
         # Generates and persists candidates
         extracted = set()
-        candidate_args = {'split': split, 'document_id': docparent.id}
+        candidate_args = {'split': split}
         for args in product(*[enumerate(child_contexts) for child_contexts in self.child_context_sets]):
 
             # TODO: Make this work for higher-order relations
@@ -192,6 +187,7 @@ class PretaggedCandidateExtractor(UDFRunner):
     """UDFRunner for PretaggedCandidateExtractorUDF"""
     def __init__(self, candidate_class, entity_types, self_relations=False,
      nested_relations=False, symmetric_relations=True, entity_sep='~@~'):
+        self.ExtractionCandidate = candidate_class
         super(PretaggedCandidateExtractor, self).__init__(
             PretaggedCandidateExtractorUDF, candidate_class=candidate_class,
             entity_types=entity_types, self_relations=self_relations,
@@ -203,7 +199,7 @@ class PretaggedCandidateExtractor(UDFRunner):
         super(PretaggedCandidateExtractor, self).apply(xs, split=split, **kwargs)
 
     def clear(self, session, split, **kwargs):
-        cand_ids = session.query(self.FeatureCandidate.id).filter(self.FeatureCandidate.split == split).all()
+        cand_ids = session.query(self.ExtractionCandidate.id).filter(self.ExtractionCandidate.split == split).all()
         session.query(Candidate).filter(Candidate.id.in_(cand_ids)).delete(synchronize_session='fetch')
 
 
