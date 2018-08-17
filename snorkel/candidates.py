@@ -87,9 +87,13 @@ class CandidateExtractorUDF(UDF):
                 tc.load_id_or_insert(self.session)
                 self.child_context_sets[i].add(tc)
 
+        # Get the document origin by climbing up the hierarchy until we get None
+        docparent = context
+        while docparent.get_parent(): docparent = context.get_parent()
+
         # Generates and persists candidates
         extracted = set()
-        candidate_args = {'split': split}
+        candidate_args = {'split': split, 'document': docparent}
         for args in product(*[enumerate(child_contexts) for child_contexts in self.child_context_sets]):
 
             # TODO: Make this work for higher-order relations
@@ -255,8 +259,12 @@ class PretaggedCandidateExtractorUDF(UDF):
                     entity_cids[tc.id] = cid
                     entity_spans[et].append(tc)
 
+        # Get the document origin by climbing up the hierarchy until we get None
+        docparent = context
+        while docparent.get_parent(): docparent = context.get_parent()
+        
         # Generates and persists candidates
-        candidate_args = {'split' : split}
+        candidate_args = {'split' : split, 'document' : docparent}
         for args in product(*[enumerate(entity_spans[et]) for et in self.entity_types]):
 
             # TODO: Make this work for higher-order relations
