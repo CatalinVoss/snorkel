@@ -14,8 +14,6 @@ from sqlalchemy.sql import select
 from snorkel.models import Candidate, TemporarySpan, Sentence
 from snorkel.udf import UDF, UDFRunner
 
-QUEUE_COLLECT_TIMEOUT = 5
-
 
 class CandidateExtractor(UDFRunner):
     """
@@ -88,8 +86,10 @@ class CandidateExtractorUDF(UDF):
                 self.child_context_sets[i].add(tc)
 
         # Get the document origin by climbing up the hierarchy until we get None
-        docparent = context
-        while docparent.get_parent(): docparent = context.get_parent()
+        # Start by binding context to our session again
+        # TODO: is there a better way to tie the context to our session?
+        docparent = self.session.query(context.__class__).get(context.id)
+        while docparent.get_parent(): docparent = docparent.get_parent()
 
         # Generates and persists candidates
         extracted = set()
@@ -259,12 +259,8 @@ class PretaggedCandidateExtractorUDF(UDF):
                     entity_cids[tc.id] = cid
                     entity_spans[et].append(tc)
 
-        # Get the document origin by climbing up the hierarchy until we get None
-        docparent = context
-        while docparent.get_parent(): docparent = context.get_parent()
-        
         # Generates and persists candidates
-        candidate_args = {'split' : split, 'document' : docparent}
+        candidate_args = {'split' : split}
         for args in product(*[enumerate(entity_spans[et]) for et in self.entity_types]):
 
             # TODO: Make this work for higher-order relations
