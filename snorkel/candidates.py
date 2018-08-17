@@ -43,11 +43,21 @@ class CandidateExtractor(UDFRunner):
                                                  symmetric_relations=symmetric_relations)
 
     def apply(self, xs, split=0, **kwargs):
+        print('Got %d docs in CandidateExtractor' % len(xs))
         super(CandidateExtractor, self).apply(xs, split=split, **kwargs)
 
     def clear(self, session, split, **kwargs):
+        print(self.ExtractionCandidate)
+        for i_split in range(3):
+            cand_ids = session.query(self.ExtractionCandidate.id).filter(self.ExtractionCandidate.split == i_split).all()
+            print('Got %d candidates for split %i before clearing!' % (len(cand_ids), i_split))                
+
         cand_ids = session.query(self.ExtractionCandidate.id).filter(self.ExtractionCandidate.split == split).all()
         session.query(Candidate).filter(Candidate.id.in_(cand_ids)).delete(synchronize_session='fetch')
+        for i_split in range(3):
+            cand_ids = session.query(self.ExtractionCandidate.id).filter(self.ExtractionCandidate.split == i_split).all()
+            print('Got %d candidates for split %i after clearing!' % (len(cand_ids), i_split))                
+
 
 
 class CandidateExtractorUDF(UDF):
@@ -129,6 +139,7 @@ class CandidateExtractorUDF(UDF):
                     continue
 
             # Add Candidate to session
+            print(self.candidate_class)
             yield self.candidate_class(**candidate_args)
 
 
@@ -263,7 +274,7 @@ class PretaggedCandidateExtractorUDF(UDF):
         while docparent.get_parent(): docparent = docparent.get_parent()
 
         # Generates and persists candidates
-        candidate_args = {'split': split, 'document': docparent}
+        candidate_args = {'split': split, 'document_id': docparent.id}
         for args in product(*[enumerate(entity_spans[et]) for et in self.entity_types]):
 
             # TODO: Make this work for higher-order relations
