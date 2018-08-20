@@ -42,7 +42,6 @@ class csr_AnnotationMatrix(sparse.csr_matrix):
         self.key_index = kwargs.pop('key_index', None)
         self.col_index = kwargs.pop('col_index', None)
 
-        # feature = kwargs.pop('feature', None)
         candidate_subclass = kwargs.pop('candidate_subclass', None)
         if candidate_subclass is None:
             self.candidate = Candidate
