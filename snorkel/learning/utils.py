@@ -14,6 +14,7 @@ import inspect
 from itertools import product
 from multiprocessing import Process, Queue, JoinableQueue
 from queue import Empty
+from sklearn.metrics import confusion_matrix, classification_report
 
 from pandas import DataFrame
 
@@ -109,7 +110,7 @@ class Scorer(object):
             inference.
         """
         self.test_candidates    = test_candidates
-        self.test_labels        = test_labels
+        self.test_labels        = np.array(test_labels)
         self.gold_candidate_set = gold_candidate_set
         self.cardinality        = cardinality
 
@@ -165,6 +166,21 @@ class MentionScorer(Scorer):
         default b assumes), we still require the test_label to be in the set
         {-1, 0, +1}.
         """
+
+        # Arrange labels and predictions
+        test_marginals = np.array(test_marginals)
+        test_marginals[test_marginals > b] = 1
+        test_marginals[test_marginals < b] = -1
+        if set_at_thresh_as_neg:
+            test_marginals[test_marginals == b] = -1
+        if set_unlabeled_as_neg:
+            self.test_labels[self.test_labels == 0] = -1
+
+        tn, fp, fn, tp = confusion_matrix(
+            self.test_labels, test_marginals).ravel()
+        
+
+
         test_label_array = []
         tp = set()
         fp = set()
@@ -254,49 +270,6 @@ class MentionScorer(Scorer):
                     if c not in self.test_candidates]
                 print("Coverage:", (nc + ni) / (nc + ni + len(gold_missed)))
         return correct, incorrect
-
-    def summary_score(self, test_marginals, **kwargs):
-        """
-        Return the F1 score (for binary) or accuracy (for categorical).
-        Also return the label as second argument.
-        """
-        error_sets = self.score(test_marginals, display=False, **kwargs)
-        if len(error_sets) == 4:
-            _, _, f1 = binary_scores_from_counts(*map(len, error_sets))
-            return f1, "F1 Score"
-        else:
-            nc, ninc = map(len, error_sets)
-            return nc / float(nc + ninc), "Accuracy"
-
-
-def binary_scores_from_counts(ntp, nfp, ntn, nfn):
-    """
-    Precision, recall, and F1 scores from counts of TP, FP, TN, FN.
-    Example usage:
-        p, r, f1 = binary_scores_from_counts(*map(len, error_sets))
-    """
-    prec = ntp / float(ntp + nfp) if ntp + nfp > 0 else 0.0
-    rec  = ntp / float(ntp + nfn) if ntp + nfn > 0 else 0.0
-    f1   = (2 * prec * rec) / (prec + rec) if prec + rec > 0 else 0.0
-    return prec, rec, f1
-
-
-def print_scores(ntp, nfp, ntn, nfn, title='Scores'):
-    prec, rec, f1 = binary_scores_from_counts(ntp, nfp, ntn, nfn)
-    pos_acc = ntp / float(ntp + nfn) if ntp + nfn > 0 else 0.0
-    neg_acc = ntn / float(ntn + nfp) if ntn + nfp > 0 else 0.0
-    print("========================================")
-    print(title)
-    print("========================================")
-    print("Pos. class accuracy: {:.3}".format(pos_acc))
-    print("Neg. class accuracy: {:.3}".format(neg_acc))
-    print("Precision            {:.3}".format(prec))
-    print("Recall               {:.3}".format(rec))
-    print("F1                   {:.3}".format(f1))
-    print("----------------------------------------")
-    print("TP: {} | FP: {} | TN: {} | FN: {}".format(ntp, nfp, ntn, nfn))
-    print("========================================\n")
-
 
 
 ############################################################

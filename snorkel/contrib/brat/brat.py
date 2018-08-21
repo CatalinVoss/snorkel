@@ -21,7 +21,6 @@ from .utils import download
 from collections import defaultdict
 from IPython.display import IFrame, display, HTML
 from ...models import Span, Candidate, Document, Sentence, TemporarySpan, GoldLabel, GoldLabelKey
-from ...learning.utils import print_scores
 
 class BratAnnotator(object):
     """
@@ -711,6 +710,34 @@ class StandoffAnnotations(object):
 
         return config
 
+def binary_scores_from_counts(ntp, nfp, ntn, nfn):
+    """
+    Precision, recall, and F1 scores from counts of TP, FP, TN, FN.
+    Example usage:
+        p, r, f1 = binary_scores_from_counts(*map(len, error_sets))
+    """
+    # TODO: check these:
+    prec = ntp / float(ntp + nfp) if ntp + nfp > 0 else 0.0
+    rec  = ntp / float(ntp + nfn) if ntp + nfn > 0 else 0.0
+    f1   = (2 * prec * rec) / (prec + rec) if prec + rec > 0 else 0.0
+    return prec, rec, f1
+
+def print_scores(ntp, nfp, ntn, nfn, title='Scores'):
+    # TODO: check these!
+    prec, rec, f1 = binary_scores_from_counts(ntp, nfp, ntn, nfn)
+    pos_acc = ntp / float(ntp + nfn) if ntp + nfn > 0 else 0.0
+    neg_acc = ntn / float(ntn + nfp) if ntn + nfp > 0 else 0.0
+    print("========================================")
+    print(title)
+    print("========================================")
+    print("Pos. class accuracy: {:.3}".format(pos_acc))
+    print("Neg. class accuracy: {:.3}".format(neg_acc))
+    print("Precision            {:.3}".format(prec))
+    print("Recall               {:.3}".format(rec))
+    print("F1                   {:.3}".format(f1))
+    print("----------------------------------------")
+    print("TP: {} | FP: {} | TN: {} | FN: {}".format(ntp, nfp, ntn, nfn))
+    print("========================================\n")
 
 def get_doc_ids_by_query(session, candidate_class, cid_query):
     """
