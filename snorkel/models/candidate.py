@@ -120,7 +120,7 @@ def candidate_subclass(class_name, args, table_name=None, cardinality=None,
 
     # If cardinality is specified but not values, fill in with ints
     elif cardinality is not None:
-        values = list(range(cardinality))
+        values = list(range(1, cardinality + 1))
 
     class_spec = (args, table_name, cardinality, values)
     if class_name in candidate_subclasses:
