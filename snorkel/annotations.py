@@ -590,7 +590,7 @@ def save_marginals(session, X, marginals, training=True, cand_ids=None):
     print("Saved %s marginals" % len(marginals))
 
 
-def load_marginals(session, X=None, split=0, cids_query=None, training=True, candidate_subclass=None):
+def load_marginals(session, X=None, split=0, cids_query=None, training=True, candidate_subclass=None, with_candidates=False, with_cardinality=None):
     """Load the marginal probs. for a given split of Candidates"""
     if candidate_subclass is None:
         ExtractionCandidate = Candidate
@@ -636,6 +636,12 @@ def load_marginals(session, X=None, split=0, cids_query=None, training=True, can
         marginals = np.zeros((cids_query.count(), cardinality))
         cid_map = dict([(cid, i) for i, (cid,) in enumerate(cids_query.all())])
 
+    if with_cardinality is not None:
+        cardinality = with_cardinality
+        marginals = np.zeros((marginals.shape[0], cardinality))
+
+    print(marginals.shape)
+    print(cardinality)
     # Assemble the marginals matrix according to the candidate index of X
     for cid, k, p in marginal_tuples:
         marginals[cid_map[cid], k] = p
@@ -647,4 +653,13 @@ def load_marginals(session, X=None, split=0, cids_query=None, training=True, can
             marginals[i, 0] = 1 - row_sums[i]
     else:
         marginals = np.ravel(marginals[:, 1])
+
+    if with_candidates:
+        idx_cid_map = {v : k for k, v in cid_map.iteritems()}
+        cids = [idx_cid_map[i] for i in range(marginals.shape[0])]
+        cands_query = session.query(ExtractionCandidate).filter(ExtractionCandidate.id.in_(cids))
+        cands = cands_query.all()
+        cands = sorted(cands, key=lambda c: cids.index(c.id))
+        return marginals, cands
+
     return marginals
