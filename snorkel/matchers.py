@@ -327,3 +327,26 @@ class MiscMatcher(RegexMatchEach):
         kwargs['attrib'] = 'ner_tags'
         kwargs['rgx'] = 'MISC'
         super(MiscMatcher, self).__init__(*children, **kwargs)
+
+class AllNumberMatcher(RegexMatchEach):
+    """
+    Matches Spans that are numbers or dates, as identified by CoreNLP.
+
+    A convenience class for setting up a RegexMatchEach to match spans
+    for which each token was tagged as a date or number.
+    """
+    def __init__(self, *children, **kwargs):
+        kwargs['attrib'] = 'ner_tags'
+        kwargs['rgx'] = 'NUMBER|QUANTITY|DATE'
+        super(AllNumberMatcher, self).__init__(*children, **kwargs)    
+
+
+    def _f(self, c):
+        one_dig_rgx = '(four|eight|(?:fiv|(?:ni|o)n)e|t(?:wo|hree)|s(?:ix|even))'
+        ten_plus_rgx = '(twelve|(?:(?:elev|t)e|(?:fif|eigh|nine|(?:thi|fou)r|s(?:ix|even))tee)n)'
+        two_dig_rgx = '((?:fif|six|eigh|nine|(?:tw|sev)en|(?:thi|fo)r)ty)'
+        ys_rgx = '^\d{2}$|^' + ten_plus_rgx + '$|^' + two_dig_rgx + '+.' + one_dig_rgx +'$'
+        ys_r = re.compile(ys_rgx)
+
+        if super(AllNumberMatcher, self)._f(c):
+            return (ys_r.match(c.get_attrib_span(WORDS, sep=self.sep)) is not None)
