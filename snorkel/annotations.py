@@ -640,8 +640,6 @@ def load_marginals(session, X=None, split=0, cids_query=None, training=True, can
         cardinality = with_cardinality
         marginals = np.zeros((marginals.shape[0], cardinality))
 
-    print(marginals.shape)
-    print(cardinality)
     # Assemble the marginals matrix according to the candidate index of X
     for cid, k, p in marginal_tuples:
         marginals[cid_map[cid], k] = p
