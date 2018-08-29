@@ -107,6 +107,10 @@ def candidate_subclass(class_name, args, table_name=None, cardinality=None,
         values = [True, False]
         cardinality = 2
 
+    # If cardinality = 2, binary classification
+    elif cardinality == 2:
+        values = [True, False]
+        
     # Else use values if present, and validate proper input
     elif values is not None:
         if cardinality is not None and len(values) != cardinality:
