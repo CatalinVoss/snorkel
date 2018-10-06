@@ -47,7 +47,8 @@ class CandidateExtractor(UDFRunner):
 
     def clear(self, session, split, **kwargs):
         cand_ids = session.query(self.ExtractionCandidate.id).filter(self.ExtractionCandidate.split == split).all()
-        session.query(Candidate).filter(Candidate.id.in_(cand_ids)).delete(synchronize_session='fetch')
+        if cand_ids:
+            session.query(Candidate).filter(Candidate.id.in_(cand_ids)).delete(synchronize_session='fetch')
 
 class CandidateExtractorUDF(UDF):
     def __init__(self, candidate_class, cspaces, matchers, self_relations, nested_relations, symmetric_relations, **kwargs):
